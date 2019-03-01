@@ -8,10 +8,20 @@ module.exports = server => {
   server.get('/api/jokes', authenticate, getJokes);
 };
 
+const UserFuncs = require('./models.js');
+
 async function register(req, res) {
   let user = req.body;
   const hashedPassword = bcrypt.hashSync(user.password, 8);
   user.password = hashedPassword;
+
+  try {
+    const newUser = await UserFuncs.add(user);
+
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json(error);
+  }
 }
 
 function login(req, res) {
