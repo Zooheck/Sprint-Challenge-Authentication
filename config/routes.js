@@ -1,6 +1,6 @@
 const axios = require('axios');
-
-const { authenticate } = require('../auth/authenticate');
+const bcrypt = require('bcryptjs')
+const { authenticate, generateToken } = require('../auth/authenticate');
 
 module.exports = server => {
   server.post('/api/register', register);
@@ -8,12 +8,41 @@ module.exports = server => {
   server.get('/api/jokes', authenticate, getJokes);
 };
 
-function register(req, res) {
-  // implement user registration
+const UserFuncs = require('./models.js');
+
+async function register(req, res) {
+  let user = req.body;
+  const hashedPassword = bcrypt.hashSync(user.password, 8);
+  user.password = hashedPassword;
+
+  try {
+    const newUser = await UserFuncs.add(user);
+
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json(error);
+  }
 }
 
-function login(req, res) {
+async function login(req, res) {
   // implement user login
+  let { username, password } = req.body;
+  try {
+    const user = await UserFuncs.findBy({ username });
+    
+    if(user && bcrypt.compareSync(password, user.password)) {
+      const token = generateToken(user);
+      res.status(200).json({ 
+        message: `Welcome, ${user.username}!`,
+        token
+      })
+    } else {
+      res.status(401).json({ message: "Invalid credentials."})
+    }
+  } catch (error) {
+    res.status(500).json(error);
+  }
+
 }
 
 function getJokes(req, res) {
